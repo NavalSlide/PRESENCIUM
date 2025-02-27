@@ -1,0 +1,733 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Senati Dashboard</title>
+    <link rel="icon" type="image/x-icon" href="/ico.ico">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+    <style>
+ /* Estilos generales */
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #1e1e2f, #2a2a3b);
+    color: #fff;
+}
+
+/* Header */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(30, 30, 47, 0.8);
+    padding: 15px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #00aaff;
+    display: flex;
+    align-items: center;
+}
+
+.profile {
+    width: 40px;
+    height: 40px;
+    background: #d99;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+.profile:hover {
+    transform: scale(1.1);
+}
+
+.profile-menu {
+  display: none;
+  position: absolute;
+  top: 50px;
+  right: 0;
+  background: rgba(30, 30, 47, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 10px;
+  padding: 10px;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  z-index: 1001; /* Increased z-index */
+  width: 200px;
+  text-align: left;
+  backdrop-filter: blur(10px);
+}
+
+.profile-menu p {
+    margin: 5px 0;
+    color: #fff;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 20%;
+    background: rgba(30, 30, 47, 0.8);
+    padding: 20px;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+}
+
+.sidebar button {
+    padding: 15px;
+    background: linear-gradient(135deg, #3a3a5a, #2a2a3b);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    text-align: left;
+    margin-bottom: 10px;
+    width: 100%;
+    color: #fff;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.sidebar button:hover {
+    background: linear-gradient(135deg, #4a4a6a, #3a3a5a);
+    transform: translateY(-2px);
+}
+
+/* Main content */
+.main-content {
+    width: 80%;
+    background: linear-gradient(135deg, #2a2a3b, #1e1e2f);
+    padding: 20px;
+    position: relative;
+    overflow-y: auto;
+    min-height: calc(100vh - 60px);
+}
+
+/* Botones */
+.btn {
+    padding: 15px 20px;
+    background: linear-gradient(135deg, #00aaff, #0077cc);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    width: 45%;
+    color: #fff;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.btn:hover {
+    background: linear-gradient(135deg, #0077cc, #00aaff);
+    transform: scale(1.05);
+}
+
+/* Overlays y boxes */
+.content-box, .attendance-box, .mark-box, .group-overlay, .attendance-menu-overlay, .delete-student-list, .add-student-form, .attendance-history-overlay, .student-management-box {
+    display: none;
+    width: 70%;
+    max-width: 600px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    overflow-y: auto;
+    max-height: 80vh;
+    margin-left: 20px;
+    color: #fff;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Botón de cierre */
+.close-btn {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    width: 100%;
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+    color: white;
+    border: none;
+    border-radius: 5px 5px 0 0;
+    padding: 8px 10px;
+    cursor: pointer;
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+    z-index: 1001;
+    transition: background 0.3s ease;
+}
+
+.close-btn:hover {
+    background: linear-gradient(135deg, #cc0000, #ff4444);
+}
+
+/* Tablas */
+.attendance-box table, .historial-container table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #fff;
+}
+
+.attendance-box th, .attendance-box td, .historial-container th, .historial-container td {
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 5px;
+}
+
+/* Inputs y selects */
+input, select {
+    width: 80%;
+    padding: 10px;
+    margin: 10px 0;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    font-size: 16px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+}
+
+/* Botones dentro de overlays */
+button {
+    padding: 10px 20px;
+    background: linear-gradient(135deg, #00aaff, #0077cc);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+button:hover {
+    background: linear-gradient(135deg, #0077cc, #00aaff);
+    transform: scale(1.05);
+}
+
+/* Estilos específicos para botones de acción */
+#markAttendanceBtn {
+    background: linear-gradient(135deg, #4CAF50, #388E3C);
+}
+
+#markAttendanceBtn:hover {
+    background: linear-gradient(135deg, #388E3C, #4CAF50);
+}
+
+#deleteAttendanceBtn {
+    background: linear-gradient(135deg, #F44336, #D32F2F);
+}
+
+#deleteAttendanceBtn:hover {
+    background: linear-gradient(135deg, #D32F2F, #F44336);
+}
+
+#viewHistoryBtn {
+    background: linear-gradient(135deg, #2196F3, #1976D2);
+}
+
+#viewHistoryBtn:hover {
+    background: linear-gradient(135deg, #1976D2, #2196F3);
+}
+
+/* Animaciones */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Historial container */
+.historial-container {
+    width: 80%;
+    max-width: 600px;
+    height: 300px;
+    background: linear-gradient(135deg, #8a2be2, #6a1b9a);
+    border-radius: 10px;
+    padding: 15px;
+    color: white;
+    overflow-y: auto;
+    margin: 20px auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+/* Botón logout */
+.botonLogout {
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+    color: white;
+    font-weight: bold;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.botonLogout:hover {
+    background: linear-gradient(135deg, #cc0000, #ff4444);
+    transform: scale(1.05);
+}
+/* Estilo general */
+.main-content {
+    background-color: #333333;
+    color: white;
+    padding: 20px;
+}
+
+/* Botón Regresar */
+.back-btn {
+    background-color: #007bff;
+    color: white;
+    border-radius: 5px;
+    padding: 10px 20px;
+    border: none;
+    cursor: pointer;
+}
+
+/* Tabla de asistencias */
+.attendance-table {
+    width: 100%;
+    border-collapse: collapse;
+    background-color: #333333;
+    color: white;
+}
+
+.attendance-table th {
+    background-color: #888888;
+    color: white;
+    padding: 10px;
+}
+
+.attendance-table td {
+    padding: 10px;
+    border-bottom: 1px solid #444444;
+}
+
+.attendance-table tr:nth-child(even) {
+    background-color: #2a2a2a;
+}
+
+/* Encabezados y subtítulos */
+.attendance-box h3, .attendance-box p {
+    color: white;
+}
+
+/* Sidebar (ajustado a la derecha como en la imagen) */
+.sidebar {
+    width: 50px;
+    background-color: #cccccc;
+    position: fixed;
+    right: 0;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+}
+/* Estilos generales */
+body {
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+    background: linear-gradient(135deg, #1e1e2f, #2a2a3b);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+/* Header */
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: rgba(30, 30, 47, 0.8);
+    padding: 15px;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.container {
+    display: flex;
+    flex: 1;
+}
+
+/* Sidebar - Fixed position and width */
+.sidebar {
+    width: 200px; /* Fixed width */
+    background: rgba(30, 30, 47, 0.8);
+    padding: 20px;
+    height: calc(100vh - 70px); /* Account for header */
+    overflow-y: auto;
+    box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
+    flex-shrink: 0;
+    position: relative; /* Changed from sticky */
+    left: 0; /* Ensure it stays on the left */
+}
+
+/* Sidebar buttons - Fix text wrapping */
+.sidebar button {
+    padding: 15px;
+    background: linear-gradient(135deg, #3a3a5a, #2a2a3b);
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 16px;
+    text-align: center; /* Center text */
+    margin-bottom: 10px;
+    width: 100%;
+    color: #fff;
+    transition: background 0.3s ease, transform 0.3s ease;
+    white-space: normal; /* Allow text to wrap */
+    line-height: 1.2; /* Better line spacing for multi-line text */
+    min-height: 50px; /* Minimum height for buttons */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sidebar button:hover {
+    background: linear-gradient(135deg, #4a4a6a, #3a3a5a);
+    transform: translateY(-2px);
+}
+
+/* Main content */
+.main-content {
+    flex: 1;
+    background: linear-gradient(135deg, #2a2a3b, #1e1e2f);
+    padding: 20px;
+    overflow-y: auto;
+    min-height: calc(100vh - 70px);
+}
+
+/* Logo */
+.logo {
+    font-size: 24px;
+    font-weight: bold;
+    color: #00aaff;
+    display: flex;
+    align-items: center;
+}
+
+/* Profile */
+.profile {
+    width: 40px;
+    height: 40px;
+    background: #d99;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    position: relative;
+    transition: transform 0.3s ease;
+}
+
+.profile:hover {
+    transform: scale(1.1);
+}
+
+.profile-menu {
+    display: none;
+    position: absolute;
+    top: 50px;
+    right: 0;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+    padding: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    width: 200px;
+    text-align: left;
+    backdrop-filter: blur(10px);
+}
+
+/* Overlay elements and other styles remain unchanged */
+.content-box, .attendance-box, .mark-box, .group-overlay, .attendance-menu-overlay, .delete-student-list, .add-student-form, .attendance-history-overlay, .student-management-box {
+    display: none;
+    width: 70%;
+    max-width: 600px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    overflow-y: auto;
+    max-height: 80vh;
+    margin-left: 20px;
+    color: #fff;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+
+/* Botón logout - Improve readability */
+.botonLogout {
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+    color: white;
+    font-weight: bold;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+    text-align: center;
+    line-height: 1.2;
+    margin-top: 20px;
+}
+
+.botonLogout:hover {
+    background: linear-gradient(135deg, #cc0000, #ff4444);
+    transform: scale(1.05);
+}
+#profileMenu {
+  /* Remove the display: block and adjust z-index */
+  z-index: 1001;
+  position: absolute;
+}
+/* Ensure responsive design */
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column;
+    }
+    
+    .sidebar {
+        width: 100%;
+        height: auto;
+        padding: 10px;
+    }
+    
+    .main-content {
+        width: 100%;
+    }
+}
+/* Estilos para la caja de información de la cuenta */
+.account-info-box {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    width: 80%;
+    max-width: 400px;
+    margin: 20px auto;
+    text-align: left;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.account-info-box h3 {
+    margin-bottom: 20px;
+    font-size: 24px;
+    text-align: center;
+}
+
+.account-info-box p {
+    margin: 10px 0;
+    font-size: 16px;
+}
+
+.account-info-box .back-btn {
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-bottom: 20px;
+    width: 100%;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.account-info-box .back-btn:hover {
+    background: linear-gradient(135deg, #cc0000, #ff4444);
+    transform: scale(1.05);
+}
+/* Estilos para la gestión de grupos */
+.group-management-box, .create-group-form, .edit-groups-list {
+    background: rgba(255, 255, 255, 0.1);
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(10px);
+    color: #fff;
+    width: 80%;
+    max-width: 600px;
+    margin: 20px auto;
+    text-align: center;
+    animation: fadeIn 0.5s ease-in-out;
+}
+
+.group-management-buttons {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+}
+
+.group-management-buttons button, 
+.create-group-form button, 
+.edit-groups-list button {
+    background: linear-gradient(135deg, #00aaff, #0077cc);
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s ease, transform 0.3s ease;
+}
+
+.group-management-buttons button:hover, 
+.create-group-form button:hover, 
+.edit-groups-list button:hover {
+    background: linear-gradient(135deg, #0077cc, #00aaff);
+    transform: scale(1.05);
+}
+
+.create-group-form input, 
+.edit-group-form input {
+    width: calc(50% - 10px);
+    margin: 10px 5px;
+    padding: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 5px;
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
+    display: inline-block;
+}
+
+.back-to-group-management {
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+}
+
+.back-to-group-management:hover {
+    background: linear-gradient(135deg, #cc0000, #ff4444);
+}
+
+/* Lista de grupos para editar/eliminar */
+.group-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.group-info h5 {
+    margin: 0;
+    font-size: 18px;
+}
+
+.group-info p {
+    margin: 5px 0 0;
+    font-size: 14px;
+    color: #ccc;
+}
+
+.group-actions button {
+    margin-left: 10px;
+    padding: 5px 10px;
+}
+
+.group-actions .edit-group-btn {
+    background: linear-gradient(135deg, #4CAF50, #388E3C);
+}
+
+.group-actions .edit-group-btn:hover {
+    background: linear-gradient(135deg, #388E3C, #4CAF50);
+}
+
+.group-actions .delete-group-btn {
+    background: linear-gradien
+t(135deg, #F44336, #D32F2F);
+}
+
+.group-actions .delete-group-btn:hover {
+    background: linear-gradient(135deg, #D32F2F, #F44336);
+}
+
+.group-actions .delete-group-btn:disabled {
+    background: #666;
+    cursor: not-allowed;
+    transform: none;
+}
+
+/* Formulario de edición de grupo */
+.edit-group-form {
+    margin-top: 20px;
+    padding: 15px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 5px;
+}
+
+.edit-group-form button {
+    margin: 10px 5px 0;
+}
+
+.edit-group-form .submit-edit-group {
+    background: linear-gradient(135deg, #4CAF50, #388E3C);
+}
+
+.edit-group-form .submit-edit-group:hover {
+    background: linear-gradient(135deg, #388E3C, #4CAF50);
+}
+
+.edit-group-form .cancel-edit-group {
+    background: linear-gradient(135deg, #ff4444, #cc0000);
+}
+
+.edit-group-form .cancel-edit-group:hover {
+    background: linear-gradient(135deg, #cc0000, #ff4444);
+}
+.sidebar h2 {
+    text-align: center;
+    margin: 0 auto;
+    padding: 10px 0;
+}
+</style>
+</head>
+<body>
+    <div class="header">
+        <div class="logo">PRESENCIUM</div>
+    </div>
+    <div class="container">
+        <div class="sidebar">
+            <button>Gestionar asistencia</button>
+            <button>Grupos a cargo</button>
+            <button>Gestionar estudiantes</button> <!-- Nuevo botón -->
+            <button>Gestionar grupos</button>
+            <button id="logoutButton" class="botonLogout">Cerrar Sesión</button>
+        </div>
+        <div class="main-content">
+            <div id="student-list"></div> <!-- Added here -->
+        </div>
+    </div>
+    
+
+    <script src="scripts2.js"></script>
+</body>
+</html>
