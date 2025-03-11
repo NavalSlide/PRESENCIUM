@@ -1,4 +1,5 @@
 // Configuración de Firebase (usando la que proporcionaste antes)
+
 const firebaseConfig = {
     apiKey: "AIzaSyCl1tf96zBnVDD2GlWSomwABXyRjgL9J1w",
     authDomain: "senati-48545.firebaseapp.com",
@@ -26,185 +27,17 @@ const redirectToDashboard = () => {
     }
 };
 
-$(document).ready(function() {
-    auth.onAuthStateChanged((user) => {
-        if (user) {
-            console.log('Usuario autenticado:', user);
-            const userRef = database.ref('users/' + user.uid);
-            userRef.once('value', (snapshot) => {
-                const userData = snapshot.val();
-                if (userData) {
-                    $("#userName").text(userData.nombre);
-                    $("#userLastName").text(userData.apellido);
-                    $("#userEmail").text(userData.email);
-                    $("#userDate").text(new Date(userData.fechaRegistro).toLocaleDateString());
-                    // Redirigir a la página principal si no estamos en ella
-                    redirectToDashboard();
-                }
-            });
-        } else {
-            // Redirigir a index.html solo si no estamos ya en ella
-            if (!window.location.pathname.includes('index.html')) {
-                window.location.href = 'index.html';
-            }
-        }
-    });
 
-    $("#profileIcon").click(function() {
-        $("#profileMenu").toggle();
-    });
 
-    $("#logoutButton").click(function() {
-        auth.signOut()
-            .then(() => {
-                alert('Sesión cerrada correctamente');
-                window.location.href = 'index.html';
-            })
-            .catch((error) => {
-                alert('Error al cerrar sesión: ' + error.message);
-            });
-    });
 
-$(".sidebar button").click(function() {
-    let action = $(this).text();
-    if (action === "Gestionar asistencia") {
-        showAttendanceButtons();
-        } else if (action === "Grupos a cargo") {
-            showGroupButtons();
-        } else if (action === "Gestionar estudiantes") {
-            showStudentManagement();
-        }
-    });
 
-    // Mostrar la pantalla principal por defecto si ya estamos autenticados
-    if (auth.currentUser) {
-        showAttendanceButtons();
-    }
-});
-
-// Resto del código (showAttendanceButtons, loadMainAttendanceHistory, etc.) permanece igual
-function showAttendanceButtons() {
-    $(".main-content").html(`
-        <div class='btn-container'>
-            <button class='btn' id='history-btn'>Historial de asistencias</button>
-            <button class='btn' id='mark-btn'>Marcar asistencia (DNI)</button>
-        </div>
-        <div class="attendance-box" style="display: none;">
-            <button class="back-btn">Regresar</button>
-            <button class="delete-history-btn">Borrar Historial</button>
-            <h3>Historial de asistencias</h3>
-            <p>Últimos registros</p>
-            <table class="attendance-table">
-                <thead>
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Grupo</th>
-                        <th>Estudiante</th>
-                        <th>Estado</th>
-                    </tr>
-                </thead>
-                <tbody id="mainHistoryBody">
-                    <tr><td colspan="4">Seleccione "Historial de asistencias" para cargar</td></tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="mark-box" style="display: none;">
-            <button class="back-btn">Regresar</button>
-            <h3>Marcar asistencia</h3>
-            <p>Ingrese su DNI</p>
-            <input type="text" id="dniInput" placeholder="DNI">
-            <button id="markAttendanceByDni">Marcar</button>
-        </div>
-    `);
-
-    console.log("Attendance buttons shown in main-content");
-
-    // Use event delegation for dynamically added buttons
-    $(document).on("click", ".btn", function() {
-        let action = $(this).text();
-        console.log("Button clicked: ", action);
-        $(".btn-container").hide();
-        $(".back-btn").fadeIn();
-        if (action === "Historial de asistencias") {
-            $(".attendance-box").fadeIn();
-            loadMainAttendanceHistory();
-        } else if (action === "Marcar asistencia (DNI)") {
-            $(".mark-box").fadeIn();
-        }
-    });
-
-    // Event for marking attendance by DNI
-    $("#markAttendanceByDni").click(function() {
-        const dni = $("#dniInput").val().trim();
-        if (!dni) {
-            alert("Por favor ingrese un DNI");
-            return;
-        }
-        markAttendanceByDni(dni);
-    });
-
-    // Event for returning to the main screen
-    $(".back-btn").click(function() {
-        $(".btn-container").fadeIn();
-        $(".attendance-box, .mark-box").hide();
-        $(".back-btn").hide();
-    });
-
-    // Event for deleting attendance history
-    $(".delete-history-btn").click(function() {
-        if (confirm("¿Estás seguro de que deseas borrar todo el historial de asistencias? Esta acción no se puede deshacer.")) {
-            deleteAllAttendanceHistory();
-        }
-    });
-}
-
-function loadMainAttendanceHistory() {
-    const user = firebase.auth().currentUser;
-    if (!user) return;
-
-    const attendanceRef = firebase.database().ref('users/' + user.uid + '/attendance');
-    attendanceRef.once('value', (snapshot) => {
-        if (!snapshot.exists()) {
-            $("#mainHistoryBody").html(`<tr><td colspan="4">No hay asistencias registradas</td></tr>`);
-            return;
-        }
-
-        $("#mainHistoryBody").empty();
-        const allAttendances = [];
-        snapshot.forEach((studentSnapshot) => {
-            studentSnapshot.forEach((attendanceSnapshot) => {
-                const attendance = attendanceSnapshot.val();
-                allAttendances.push(attendance);
-            });
-        });
-
-        // Ordenar por timestamp descendente (más reciente primero)
-        allAttendances.sort((a, b) => b.timestamp - a.timestamp);
-        const recentAttendances = allAttendances.slice(0, 20); // Mostrar solo los 20 más recientes
-
-        if (recentAttendances.length === 0) {
-            $("#mainHistoryBody").html(`<tr><td colspan="4">No hay registros recientes</td></tr>`);
-        } else {
-            recentAttendances.forEach((attendance) => {
-                $("#mainHistoryBody").append(`
-                    <tr>
-                        <td>${attendance.date}</td>
-                        <td>${attendance.groupName}</td>
-                        <td>${attendance.studentName}</td>
-                        <td style="${attendance.status === 'Presente' ? 'color:green;' : 'color:red;'}">${attendance.status}</td>
-                    </tr>
-                `);
-            });
-        }
-    });
-}
 
 
 // Función para marcar asistencia por DNI
 function markAttendanceByDni(dni) {
     const user = firebase.auth().currentUser;
     if (!user) {
-        alert("No hay usuario autenticado. Por favor, inicia sesión.");
+        showNotification("No hay usuario autenticado. Por favor, inicia sesión.", "error");
         return;
     }
 
@@ -226,221 +59,124 @@ function markAttendanceByDni(dni) {
             return found; // Detiene la iteración de forEach si found es true
         });
         if (!found) {
-            alert("No se encontró ningún estudiante con ese DNI en tus grupos");
+            showNotification("No se encontró ningún estudiante con ese DNI en tus grupos", "error");
         }
     }).catch((error) => {
-        alert("Error al buscar estudiante: " + error.message);
+        showNotification("Error al buscar estudiante: " + error.message, "error");
     });
 }
 
-// Función para mostrar los botones de grupo
-function showAttendanceButtons() {
-    $(".main-content").html(`
-        <div class='btn-container'>
-            <button class='btn' id='history-btn'>Historial de asistencias</button>
-            <button class='btn' id='mark-btn'>Marcar asistencia (DNI)</button>
-        </div>
-        <div class="attendance-box" style="display: none;">
-            <button class="back-btn">Regresar</button>
-            <button class="delete-history-btn">Borrar Historial</button>
-            <h3>Historial de asistencias</h3>
-            <p>Últimos registros</p>
-            <table class="attendance-table">
-                <thead>
-                    <tr>
-                        <th>Fecha</th>
-                        <th>Grupo</th>
-                        <th>Estudiante</th>
-                        <th>Estado</th>
-                    </tr>
-                </thead>
-                <tbody id="mainHistoryBody">
-                    <tr><td colspan="4">Seleccione "Historial de asistencias" para cargar</td></tr>
-                </tbody>
-            </table>
-        </div>
-        <div class="mark-box" style="display: none;">
-            <button class="back-btn">Regresar</button>
-            <h3>Marcar asistencia</h3>
-            <p>Ingrese su DNI</p>
-            <input type="text" id="dniInput" placeholder="DNI">
-            <button id="markAttendanceByDni">Marcar</button>
-        </div>
-    `);
-
-    console.log("Attendance buttons shown in main-content");
-
-    // Use event delegation for dynamically added buttons
-    $(document).on("click", ".btn", function() {
-        let action = $(this).text();
-        console.log("Button clicked: ", action);
-        $(".btn-container").hide();
-        $(".back-btn").fadeIn();
-        if (action === "Historial de asistencias") {
-            $(".attendance-box").fadeIn();
-            loadMainAttendanceHistory();
-        } else if (action === "Marcar asistencia (DNI)") {
-            $(".mark-box").fadeIn();
-        }
-    });
-
-    // Event for marking attendance by DNI
-    $("#markAttendanceByDni").click(function() {
-        const dni = $("#dniInput").val().trim();
-        if (!dni) {
-            alert("Por favor ingrese un DNI");
-            return;
-        }
-        markAttendanceByDni(dni);
-    });
-
-    // Event for returning to the main screen
-    $(".back-btn").click(function() {
-        $(".btn-container").fadeIn();
-        $(".attendance-box, .mark-box").hide();
-        $(".back-btn").hide();
-    });
-
-    // Event for deleting attendance history
-    $(".delete-history-btn").click(function() {
-        if (confirm("¿Estás seguro de que deseas borrar todo el historial de asistencias? Esta acción no se puede deshacer.")) {
-            deleteAllAttendanceHistory();
-        }
-    });
+// Función de notificación que desaparece a los 3 segundos (sin botón de cierre)
+function showNotification(message, type = 'info') {
+    // Crear el elemento de notificación (sin botón de cierre)
+    const notification = $(`<div class="notification ${type}">
+        <span class="message">${message}</span>
+    </div>`);
+    
+    // Añadir al DOM
+    $("body").append(notification);
+    
+    // Mostrar con animación
+    notification.addClass('show');
+    
+    // Auto-ocultar después de 3 segundos
+    setTimeout(() => {
+        notification.removeClass('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
+
 
 // Mostrar botones de grupo
-function showGroupButtons() {
-    $(".main-content").html(`
-        <h2>Mis Grupos</h2>
-        <div class='group-box'>
-            <button>911NYC - Desarrollo Python</button>
-            <button>4632NC - Desarrollo Web</button>
-            <button>L4D2 - Desarrollo de videojuegos</button>
-        </div>
-        <div class="group-overlay" id="groupOverlay">
-            <button class="close-btn">X</button>
-            <h3 id="groupTitle">911NYC - Desarrollo Python</h3>
-            <div class="name-list" id="studentsList">
-                <!-- Los estudiantes se cargarán dinámicamente -->
-            </div>
-        </div>
-        <div class="attendance-menu-overlay" id="attendanceMenuOverlay">
-            <button class="close-btn">X</button>
-            <h3 id="studentName"></h3>
-            <div class="attendance-menu-buttons">
-                <button id="markAttendanceBtn">Marcar asistencia</button>
-                <button id="deleteAttendanceBtn">Eliminar asistencia</button>
-                <button id="viewHistoryBtn">Ver historial</button>
-            </div>
-        </div>
-        <div class="attendance-history-overlay" id="attendanceHistoryOverlay" style="display:none;">
-            <button class="close-btn">X</button>
-            <h3>Historial de Asistencias</h3>
-            <div id="attendanceHistory">
-                <table style="width:100%; margin-top:40px; border-collapse:collapse;">
-                    <thead>
-                        <tr>
-                            <th style="padding:10px; background:#888; color:white; border-radius:5px 0 0 5px;">Fecha</th>
-                            <th style="padding:10px; background:#888; color:white; border-radius:0 5px 5px 0;">Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="attendanceHistoryBody">
-                        <!-- El historial se cargará dinámicamente -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `);
-
-    $("#groupOverlay").hide();
-    $("#attendanceMenuOverlay").hide();
-    $("#attendanceHistoryOverlay").hide();
-
-    $(".group-box button").click(function() {
-        let groupName = $(this).text();
-        $("#groupTitle").text(groupName);
-        currentGroup = groupName;
-        loadStudentsFromGroup(groupName);
-        $(".group-box").hide();
-        $("#groupOverlay").fadeIn();
-    });
-
-    $("#groupOverlay .close-btn").click(function() {
-        $("#groupOverlay").hide();
-        $(".group-box").fadeIn();
-    });
-
-    $("#studentsList").on("click", ".attendance-btn", function() {
-        let studentName = $(this).prev("span").text();
-        let studentId = $(this).data("student-id");
-        currentStudent = { id: studentId, name: studentName };
-        $("#studentName").text(studentName);
-        $("#groupOverlay").hide();
-        $("#attendanceMenuOverlay").fadeIn();
-    });
-
-    $("#attendanceMenuOverlay .close-btn").click(function() {
-        $("#attendanceMenuOverlay").hide();
-        $("#groupOverlay").fadeIn();
-    });
-
-    $("#attendanceHistoryOverlay .close-btn").click(function() {
-        $("#attendanceHistoryOverlay").hide();
-        $("#attendanceMenuOverlay").fadeIn();
-    });
-
-    $("#markAttendanceBtn").click(function() {
-        markAttendance(currentStudent.id, currentStudent.name, currentGroup, "Presente");
-    });
-
-    $("#deleteAttendanceBtn").click(function() {
-        deleteLastAttendance(currentStudent.id, currentGroup);
-    });
-
-    $("#viewHistoryBtn").click(function() {
-        loadAttendanceHistory(currentStudent.id, currentGroup);
-        $("#attendanceMenuOverlay").hide();
-        $("#attendanceHistoryOverlay").fadeIn();
-    });
-}
-
 // Función para cargar estudiantes de un grupo desde Firebase
 function loadStudentsFromGroup(groupName) {
-    const user = firebase.auth().currentUser;
-    if (!user) return;
-
-    const groupsRef = database.ref('users/' + user.uid + '/groups');
-    groupsRef.once('value', (snapshot) => {
+    $("#studentsList").empty().html('<p class="loading-message">Cargando estudiantes...</p>');
+    
+    const userId = firebase.auth().currentUser.uid;
+    if (!userId) return;
+    
+    const groupsRef = firebase.database().ref('users/' + userId + '/groups');
+    
+    groupsRef.once('value').then((snapshot) => {
         let groupKey = null;
+        
+        // Find the group key based on the group name
         snapshot.forEach((groupSnapshot) => {
             if (groupSnapshot.val().name === groupName) {
                 groupKey = groupSnapshot.key;
             }
         });
-
+        
         if (!groupKey) {
             $("#studentsList").html("<p>Grupo no encontrado</p>");
             return;
         }
-
-        const studentsRef = database.ref('users/' + user.uid + '/groups/' + groupKey + '/students');
-        studentsRef.once('value', (studentsSnapshot) => {
+        
+        // Now use that key to get the students
+        const studentsRef = firebase.database().ref('users/' + userId + '/groups/' + groupKey + '/students');
+        
+        studentsRef.once('value').then((studentsSnapshot) => {
             $("#studentsList").empty();
-            if (!studentsSnapshot.exists()) {
-                $("#studentsList").html("<p>No hay estudiantes en este grupo</p>");
+            
+            if (!studentsSnapshot.exists() || studentsSnapshot.numChildren() === 0) {
+                $("#studentsList").html('<p class="loading-message">No hay estudiantes en este grupo</p>');
                 return;
             }
             
-            studentsSnapshot.forEach((studentSnapshot) => {
-                const student = studentSnapshot.val();
-                $("#studentsList").append(`
-                    <div class="name-item">
-                        <span>${student.name}</span>
-                        <button class="attendance-btn" data-student-id="${studentSnapshot.key}">Gestionar asistencia</button>
+            let index = 0;
+            studentsSnapshot.forEach((childSnapshot) => {
+                const studentId = childSnapshot.key;
+                const studentData = childSnapshot.val();
+                const studentName = studentData.name || 'Estudiante sin nombre';
+                
+                // Create element with animation delay
+                const studentElement = `
+                    <div class="student-item" style="animation-delay: ${index * 0.05}s">
+                        <span class="student-name">${studentName}</span>
+                        <button class="attendance-btn" data-student-id="${studentId}">
+                            <i class="fas fa-clipboard-check"></i> Asistencia
+                        </button>
                     </div>
-                `);
+                `;
+                
+                $("#studentsList").append(studentElement);
+                index++;
             });
+            
+            // Adjuntar evento a los botones de asistencia después de agregarlos al DOM
+            $("#studentsList").on("click", ".attendance-btn", function() {
+                let studentName = $(this).prev(".student-name").text();
+                let studentId = $(this).data("student-id");
+                
+                // Guardar referencia al estudiante actual
+                currentStudent = {
+                    id: studentId,
+                    name: studentName
+                };
+                
+                // Actualizar el título en el menú de asistencia
+                $("#studentName").text(studentName);
+                $("#historyStudentName").text(studentName);
+                
+                // Mostrar el menú de asistencia
+                $("#groupOverlay").fadeOut(300, function() {
+                    $("#attendanceMenuOverlay").fadeIn(300);
+                });
+            });
+            
+        }).catch((error) => {
+            console.error("Error loading students:", error);
+            $("#studentsList").html('<p class="loading-message">Error al cargar estudiantes</p>');
+        });
+    }).catch((error) => {
+        console.error("Error finding group:", error);
+        $("#studentsList").html('<p class="loading-message">Error al buscar el grupo</p>');
+    });
+    
+    // Añadir funcionalidad al botón de cierre
+    $("#groupOverlay .close-btn").off("click").on("click", function() {
+        $("#groupOverlay").fadeOut(300, function() {
+            $(".groups-management-box").fadeIn(300);
         });
     });
 }
@@ -495,46 +231,32 @@ function markAttendance(studentId, studentName, groupName, status) {
         studentName: studentName,
         timestamp: timestamp
     }).then(() => {
-        alert(`Asistencia: ${status} marcada para ${studentName}`);
+        showNotification(`Asistencia: ${status} marcada para ${studentName}`, "success");
         loadMainAttendanceHistory(); // Refresca la UI
     }).catch((error) => {
         console.error("Error detallado:", error);
-        alert(`Error al registrar asistencia: ${error.message}`);
+        showNotification(`Error al registrar asistencia: ${error.message}`, "error");
     });
 }
-// Función para eliminar la última asistencia
-function deleteLastAttendance(studentId, groupName) {
-    const attendanceRef = database.ref('attendance/' + studentId);
+
+// Asegúrate de que esta función esté disponible en tu código
+function showNotification(message, type = 'info') {
+    // Crear el elemento de notificación (sin botón de cierre)
+    const notification = $(`<div class="notification ${type}">
+        <span class="message">${message}</span>
+    </div>`);
     
-    // Obtener todas las asistencias ordenadas por timestamp
-    attendanceRef.orderByChild('timestamp').limitToLast(1).once('value', (snapshot) => {
-        if (!snapshot.exists()) {
-            alert("No hay asistencias registradas para eliminar");
-            return;
-        }
-        
-        // Encontrar la última asistencia del grupo especificado
-        let lastAttendanceKey = null;
-        snapshot.forEach((attendanceSnapshot) => {
-            const attendance = attendanceSnapshot.val();
-            if (attendance.groupName === groupName) {
-                lastAttendanceKey = attendanceSnapshot.key;
-            }
-        });
-        
-        if (lastAttendanceKey) {
-            // Eliminar la última asistencia
-            attendanceRef.child(lastAttendanceKey).remove().then(() => {
-                alert("Última asistencia eliminada correctamente");
-            }).catch((error) => {
-                alert("Error al eliminar asistencia: " + error.message);
-            });
-        } else {
-            alert("No hay asistencias para este grupo");
-        }
-    }).catch((error) => {
-        alert("Error al buscar asistencias: " + error.message);
-    });
+    // Añadir al DOM
+    $("body").append(notification);
+    
+    // Mostrar con animación
+    notification.addClass('show');
+    
+    // Auto-ocultar después de 3 segundos
+    setTimeout(() => {
+        notification.removeClass('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
 }
 
 // Función para cargar el historial principal
@@ -582,14 +304,17 @@ function loadMainAttendanceHistory() {
 // Actualizar la estructura de la tabla en showAttendanceButtons
 function showAttendanceButtons() {
     $(".main-content").html(`
-        <div class='btn-container'>
-            <button class='btn' id='history-btn'>Historial de asistencias</button>
-            <button class='btn' id='mark-btn'>Marcar asistencia (DNI)</button>
+        <div class="attendance-management-box glass-effect">
+            <h3>Gestión de Asistencia</h3>
+            <div class="attendance-buttons-container">
+                <button data-action="history">Historial de asistencias</button>
+                <button data-action="mark-attendance-by-dni">Marcar asistencia (DNI)</button>
+            </div>
         </div>
-        <div class="attendance-box" style="display: none;">
-            <button class="back-btn">Regresar</button>
+        <div class="attendance-box glass-effect" style="display: none;">
+            <button class="back-btn">Volver</button>
             <button class="delete-history-btn">Borrar Historial</button>
-            <h3>Historial de asistencias</h3>
+            <h3 class="student-history-title">Historial de asistencias</h3>
             <p>Últimos registros</p>
             <table class="attendance-table">
                 <thead>
@@ -605,8 +330,8 @@ function showAttendanceButtons() {
                 </tbody>
             </table>
         </div>
-        <div class="mark-box" style="display: none;">
-            <button class="back-btn">Regresar</button>
+        <div class="mark-box glass-effect" style="display: none;">
+            <button class="back-btn">Volver</button>
             <h3>Marcar asistencia</h3>
             <p>Ingrese su DNI</p>
             <input type="text" id="dniInput" placeholder="DNI">
@@ -617,15 +342,15 @@ function showAttendanceButtons() {
     console.log("Attendance buttons shown in main-content");
 
     // Use event delegation for dynamically added buttons
-    $(document).on("click", ".btn", function() {
-        let action = $(this).text();
+    $(document).on("click", "[data-action]", function() {
+        let action = $(this).attr("data-action");
         console.log("Button clicked: ", action);
-        $(".btn-container").hide();
-        $(".back-btn").fadeIn();
-        if (action === "Historial de asistencias") {
+        $(".attendance-management-box").hide();
+        
+        if (action === "history") {
             $(".attendance-box").fadeIn();
             loadMainAttendanceHistory();
-        } else if (action === "Marcar asistencia (DNI)") {
+        } else if (action === "mark-attendance-by-dni") {
             $(".mark-box").fadeIn();
         }
     });
@@ -642,16 +367,24 @@ function showAttendanceButtons() {
 
     // Event for returning to the main screen
     $(".back-btn").click(function() {
-        $(".btn-container").fadeIn();
+        $(".attendance-management-box").fadeIn();
         $(".attendance-box, .mark-box").hide();
-        $(".back-btn").hide();
     });
 
     // Event for deleting attendance history
     $(".delete-history-btn").click(function() {
-        if (confirm("¿Estás seguro de que deseas borrar todo el historial de asistencias? Esta acción no se puede deshacer.")) {
-            deleteAllAttendanceHistory();
-        }
+        // Reemplazar confirm() con nuestro diálogo personalizado
+        showCustomConfirmation(
+            "¿Estás seguro de que deseas borrar todo el historial de asistencias? Esta acción no se puede deshacer.",
+            () => {
+                // Si confirma, ejecuta la eliminación
+                deleteAllAttendanceHistory();
+            },
+            () => {
+                // Si cancela, no hace nada
+                console.log("Eliminación de historial cancelada");
+            }
+        );
     });
 }
 function deleteAllAttendanceHistory() {
@@ -672,128 +405,6 @@ function deleteAllAttendanceHistory() {
         });
 }
 // Función para mostrar los botones de grupo actualizada
-function showGroupButtons() {
-    $(".main-content").html(`
-        <h2>Mis Grupos</h2>
-        <div class='group-box'>
-            <button>911NYC - Desarrollo Python</button>
-            <button>4632NC - Desarrollo Web</button>
-            <button>L4D2 - Desarrollo de videojuegos</button>
-        </div>
-        <div class="group-overlay" id="groupOverlay">
-            <button class="close-btn">X</button>
-            <h3 id="groupTitle">911NYC - Desarrollo Python</h3>
-            <div class="name-list" id="studentsList">
-                <!-- Los estudiantes se cargarán dinámicamente -->
-            </div>
-        </div>
-        <div class="attendance-menu-overlay" id="attendanceMenuOverlay">
-            <button class="close-btn">X</button>
-            <h3 id="studentName"></h3>
-            <div class="attendance-menu-buttons">
-                <button id="markPresentBtn">Marcar Presente</button>
-                <button id="markAbsentBtn">Marcar Ausente</button>
-                <button id="deleteAttendanceBtn">Eliminar asistencia</button>
-                <button id="viewHistoryBtn">Ver historial</button>
-            </div>
-        </div>
-        <div class="attendance-history-overlay" id="attendanceHistoryOverlay" style="display:none; position:absolute; width:80%; max-width:600px; background:#bbb; padding:20px; border-radius:10px; left:50%; top:50%; transform:translate(-50%, -50%); z-index:1002;">
-            <button class="close-btn">X</button>
-            <h3>Historial de Asistencias</h3>
-            <h4 id="historyStudentName"></h4>
-            <div id="attendanceHistory">
-                <table style="width:100%; margin-top:40px; border-collapse:collapse;">
-                    <thead>
-                        <tr>
-                            <th style="padding:10px; background:#888; color:white; border-radius:5px 0 0 5px;">Fecha</th>
-                            <th style="padding:10px; background:#888; color:white; border-radius:0 5px 5px 0;">Estado</th>
-                        </tr>
-                    </thead>
-                    <tbody id="attendanceHistoryBody">
-                        <!-- El historial se cargará dinámicamente -->
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    `);
-    
-    // Ocultar los overlays inicialmente
-    $("#groupOverlay").hide();
-    $("#attendanceMenuOverlay").hide();
-    $("#attendanceHistoryOverlay").hide();
-
-    // Cargar los estudiantes cuando se seleccione un grupo
-    $(".group-box button").click(function() {
-        let groupName = $(this).text();
-        $("#groupTitle").text(groupName);
-        
-        // Guardamos el nombre del grupo seleccionado en una variable para usarlo después
-        currentGroup = groupName;
-        
-        // Cargar los estudiantes del grupo desde Firebase
-        loadStudentsFromGroup(groupName);
-        
-        $(".group-box").hide();
-        $("#groupOverlay").fadeIn();
-    });
-
-    // Cerrar el overlay de grupo y volver a los botones originales
-    $("#groupOverlay .close-btn").click(function() {
-        $("#groupOverlay").hide();
-        $(".group-box").fadeIn();
-    });
-
-    // Configurar evento delegado para los botones de asistencia
-    $("#studentsList").on("click", ".attendance-btn", function() {
-        let studentName = $(this).prev("span").text();
-        let studentId = $(this).data("student-id");
-        
-        // Guardar el estudiante actual para usarlo en las funciones de asistencia
-        currentStudent = {
-            id: studentId,
-            name: studentName
-        };
-        
-        $("#studentName").text(studentName);
-        $("#historyStudentName").text(studentName);
-        $("#groupOverlay").hide();
-        $("#attendanceMenuOverlay").fadeIn();
-    });
-
-    // Cerrar el menú de asistencia y volver al overlay de grupo
-    $("#attendanceMenuOverlay .close-btn").click(function() {
-        $("#attendanceMenuOverlay").hide();
-        $("#groupOverlay").fadeIn();
-    });
-    
-    // Cerrar el historial de asistencias
-    $("#attendanceHistoryOverlay .close-btn").click(function() {
-        $("#attendanceHistoryOverlay").hide();
-        $("#attendanceMenuOverlay").fadeIn();
-    });
-
-    // Marcar asistencia como Presente
-    $("#markPresentBtn").click(function() {
-        markAttendance(currentStudent.id, currentStudent.name, currentGroup, "Presente");
-    });
-    
-    // Marcar asistencia como Ausente
-    $("#markAbsentBtn").click(function() {
-        markAttendance(currentStudent.id, currentStudent.name, currentGroup, "Ausente");
-    });
-
-    // Eliminar última asistencia
-    $("#deleteAttendanceBtn").click(function() {
-        deleteLastAttendance(currentStudent.id, currentGroup);
-    });
-
-    // Ver historial de asistencias
-    $("#viewHistoryBtn").click(function() {
-        loadAttendanceHistory(currentStudent.id, currentGroup);
-        $("#attendanceMenuOverlay").hide();
-        $("#attendanceHistoryOverlay").fadeIn();
-    });
-}
 
 // Función para cargar el historial de asistencias con opción de eliminar
 function loadAttendanceHistory(studentId, groupName) {
@@ -830,17 +441,19 @@ function loadAttendanceHistory(studentId, groupName) {
         }
         
         $("#attendanceHistoryOverlay table thead tr").html(`
-            <th style="padding:10px; background:#888; color:white; border-radius:5px 0 0 5px;">Fecha</th>
-            <th style="padding:10px; background:#888; color:white;">Estado</th>
-            <th style="padding:10px; background:#888; color:white; border-radius:0 5px 5px 0;">Acciones</th>
+            <th>Fecha</th>
+            <th>Estado</th>
+            <th>Acciones</th>
         `);
         
         attendances.forEach((attendance) => {
+            const statusClass = attendance.status === 'Presente' ? 'status-present' : 'status-absent';
+            
             $("#attendanceHistoryBody").append(`
                 <tr class="attendance-item">
-                    <td style="padding:10px; background:white; color: black; text border-radius:5px 0 0 5px;">${attendance.date}</td>
-                    <td style="padding:10px; background:white; ${attendance.status === 'Presente' ? 'color:green;' : 'color:red;'}">${attendance.status}</td>
-                    <td style="padding:10px; background:white; border-radius:0 5px 5px 0;">
+                    <td>${attendance.date}</td>
+                    <td class="${statusClass}">${attendance.status}</td>
+                    <td>
                         <button class="delete-attendance-btn" data-attendance-key="${attendance.key}">Eliminar</button>
                     </td>
                 </tr>
@@ -857,89 +470,7 @@ function loadAttendanceHistory(studentId, groupName) {
     });
 }
 
-// Función para cargar la lista de estudiantes para eliminar o mover
-function loadStudentListForDeletion() {
-    const user = firebase.auth().currentUser;
-    if (!user) {
-        alert("No hay usuario autenticado. Por favor, inicia sesión.");
-        $("#student-list").html("<p>No hay usuario autenticado</p>");
-        return;
-    }
 
-    $("#student-list").empty();
-
-    const groupsRef = database.ref('users/' + user.uid + '/groups');
-    groupsRef.once('value', (snapshot) => {
-        if (!snapshot.exists()) {
-            $("#student-list").html("<p>No hay grupos registrados</p>");
-            return;
-        }
-
-        let studentFound = false;
-        
-        snapshot.forEach((groupSnapshot) => {
-            const groupKey = groupSnapshot.key;
-            const group = groupSnapshot.val();
-            const groupName = group.name || 'Grupo sin nombre';
-            
-            // Verificar si el grupo tiene estudiantes
-            if (group.students) {
-                // Añadir encabezado del grupo
-                $("#student-list").append(`<h5 class="group-header">${groupName}</h5>`);
-                
-                // Recorrer los estudiantes del grupo
-                Object.keys(group.students).forEach((studentId) => {
-                    const student = group.students[studentId];
-                    studentFound = true;
-                    
-                    $("#student-list").append(`
-                        <div class="student-item">
-                            <span>${student.name} (DNI: ${student.dni || 'No registrado'})</span>
-                            <div class="student-actions">
-                                <button class="delete-student-btn" 
-                                    data-group-key="${groupKey}" 
-                                    data-student-id="${studentId}" 
-                                    data-student-name="${student.name}">
-                                    Eliminar
-                                </button>
-                                <button class="change-group-btn" 
-                                    data-group-key="${groupKey}" 
-                                    data-student-id="${studentId}" 
-                                    data-student-name="${student.name}">
-                                    Editar Estudiante 
-                                </button>
-                            </div>
-                        </div>
-                    `);
-                });
-            }
-        });
-        
-        if (!studentFound) {
-            $("#student-list").html("<p>No hay estudiantes registrados en ningún grupo</p>");
-        }
-        
-        // Configurar eventos para los botones
-        $(".delete-student-btn").click(function() {
-            const groupKey = $(this).data("group-key");
-            const studentId = $(this).data("student-id");
-            const studentName = $(this).data("student-name");
-            
-            if (confirm(`¿Estás seguro de que deseas eliminar a ${studentName}?`)) {
-                deleteStudent(groupKey, studentId, studentName);
-            }
-        });
-        
-        $(".change-group-btn").click(function() {
-            const groupKey = $(this).data("group-key");
-            const studentId = $(this).data("student-id");
-            showChangeGroupForm(groupKey, studentId);
-        });
-    }).catch((error) => {
-        console.error("Error al cargar estudiantes:", error);
-        $("#student-list").html("<p>Error al cargar estudiantes: " + error.message + "</p>");
-    });
-}
 
 // Función para eliminar un estudiante
 function deleteStudent(groupKey, studentId, studentName) {
@@ -1109,99 +640,7 @@ function moveStudentToGroup(currentGroupKey, newGroupKey, studentId, formId) {
     });
 }
 
-// Función para cargar la lista de estudiantes para eliminar o mover
-function loadStudentListForDeletion() {
-    const user = firebase.auth().currentUser;
-    if (!user) {
-        alert("No hay usuario autenticado. Por favor, inicia sesión.");
-        $("#student-list").html("<p>No hay usuario autenticado</p>");
-        return;
-    }
 
-    $("#student-list").empty();
-    $("#student-list").html("<p>Cargando estudiantes...</p>");
-
-    const groupsRef = database.ref('users/' + user.uid + '/groups');
-    groupsRef.once('value', (snapshot) => {
-        $("#student-list").empty();
-        
-        if (!snapshot.exists()) {
-            $("#student-list").html("<p>No hay grupos registrados</p>");
-            return;
-        }
-
-        let studentFound = false;
-        let processingCount = 0;
-        
-        snapshot.forEach((groupSnapshot) => {
-            const groupKey = groupSnapshot.key;
-            const group = groupSnapshot.val();
-            const groupName = group.name || 'Grupo sin nombre';
-            
-            // Verificar si el grupo tiene estudiantes
-            if (group.students && Object.keys(group.students).length > 0) {
-                // Añadir encabezado del grupo
-                $("#student-list").append(`<h5 class="group-header">${groupName}</h5><div id="group-${groupKey}-students"></div>`);
-                
-                processingCount++;
-                
-                // Procesar estudiantes
-                Object.keys(group.students).forEach((studentId) => {
-                    const student = group.students[studentId];
-                    studentFound = true;
-                    
-                    $(`#group-${groupKey}-students`).append(`
-                        <div class="student-item">
-                            <span>${student.name} (DNI: ${student.dni || 'No registrado'})</span>
-                            <div class="student-actions">
-                                <button class="delete-student-btn" 
-                                    data-group-key="${groupKey}" 
-                                    data-student-id="${studentId}" 
-                                    data-student-name="${student.name}">
-                                    Eliminar
-                                </button>
-                                <button class="change-group-btn" 
-                                    data-group-key="${groupKey}" 
-                                    data-student-id="${studentId}" 
-                                    data-student-name="${student.name}">
-                                    Editar Estudiante 
-                                </button>
-                            </div>
-                        </div>
-                    `);
-                });
-                
-                processingCount--;
-            }
-        });
-        
-        if (processingCount <= 0) {
-            if (!studentFound) {
-                $("#student-list").html("<p>No hay estudiantes registrados en ningún grupo</p>");
-            } else {
-                // Configurar eventos para los botones
-                $(".delete-student-btn").off("click").on("click", function() {
-                    const groupKey = $(this).data("group-key");
-                    const studentId = $(this).data("student-id");
-                    const studentName = $(this).data("student-name");
-                    
-                    if (confirm(`¿Estás seguro de que deseas eliminar a ${studentName}?`)) {
-                        deleteStudent(groupKey, studentId, studentName);
-                    }
-                });
-                
-                $(".change-group-btn").off("click").on("click", function() {
-                    const groupKey = $(this).data("group-key");
-                    const studentId = $(this).data("student-id");
-                    showChangeGroupForm(groupKey, studentId);
-                });
-            }
-        }
-    }).catch((error) => {
-        console.error("Error al cargar estudiantes:", error);
-        $("#student-list").html("<p>Error al cargar estudiantes: " + error.message + "</p>");
-    });
-}
 function loadStudentList() {
     // Code to load the list from the database
     database.ref('groups').once('value', (snapshot) => {
@@ -1234,7 +673,6 @@ function loadStudentList() {
 function showGroupManagement() {
     $(".main-content").html(`
         <div class="group-management-box">
-            <button class="back-btn">Regresar</button>
             <h3>Gestión de Grupos</h3>
             <div class="group-management-buttons">
                 <button id="create-group-btn">Crear Grupo</button>
@@ -1286,7 +724,7 @@ function showGroupManagement() {
         const groupName = $("#group-name").val().trim();
         
         if (!groupCode || !groupName) {
-            alert("Por favor complete todos los campos");
+            showNotification("Por favor complete todos los campos", "error");
             return;
         }
         
@@ -1305,7 +743,7 @@ function showGroupManagement() {
             });
     
             if (groupExists) {
-                alert("Ya existe un grupo con este nombre");
+                showNotification("Ya existe un grupo con este nombre", "error");
                 return;
             }
     
@@ -1316,7 +754,14 @@ function showGroupManagement() {
                 courseName: groupName,
                 creationDate: new Date().toISOString()
             }).then(() => {
-                alert("Grupo creado correctamente");
+                // Limpiar los campos de entrada
+                $("#group-code").val("");
+                $("#group-name").val("");
+                
+                // Mostrar notificación de éxito
+                showNotification("Grupo creado correctamente", "success");
+            }).catch(error => {
+                showNotification(`Error al crear grupo: ${error.message}`, "error");
             });
         });
     });
@@ -1517,26 +962,27 @@ function updateAttendancesForGroup(groupKey, newGroupName) {
 function deleteGroup(groupKey, groupName) {
     const user = firebase.auth().currentUser;
     if (!user) {
-        alert("No hay usuario autenticado. Por favor, inicia sesión.");
+        showNotification("No hay usuario autenticado. Por favor, inicia sesión.", "error");
         return;
     }
     
-    if (confirm(`¿Estás seguro de que deseas eliminar el grupo "${groupName}"?`)) {
-        database.ref(`users/${user.uid}/groups/${groupKey}`).remove()
-            .then(() => {
-                alert("Grupo eliminado correctamente");
-                loadGroupsForEdit();
-            })
-            .catch((error) => {
-                alert("Error al eliminar grupo: " + error.message);
-            });
-    }
+    database.ref(`users/${user.uid}/groups/${groupKey}`).remove()
+        .then(() => {
+            showNotification("Grupo eliminado correctamente", "success");
+            loadGroupsForEdit();
+        })
+        .catch((error) => {
+            showNotification("Error al eliminar grupo: " + error.message, "error");
+        });
 }
-// Función para mostrar confirmación de eliminación de grupo
+
+// Función modificada para mostrar confirmación de eliminación de grupo
 function showDeleteGroupConfirmation(groupKey, groupName) {
-    if (confirm(`¿Estás seguro de que deseas eliminar el grupo "${groupName}"?`)) {
-        deleteGroup(groupKey, groupName);
-    }
+    showCustomConfirmation(
+        `¿Estás seguro de que deseas eliminar el grupo "${groupName}"?`, 
+        () => deleteGroup(groupKey, groupName), 
+        null
+    );
 }
 // Actualizar la barra lateral para incluir la gestión de grupos
 function updateSidebar() {
@@ -1550,10 +996,10 @@ function updateSidebar() {
         <button id="logoutButton" class="botonLogout">Cerrar Sesión</button>
     `);
     
-$(".sidebar button").click(function() {
-    let action = $(this).text();
-    if (action === "Gestionar asistencia") {
-        showAttendanceButtons();
+    $(".sidebar button").click(function() {
+        let action = $(this).text();
+        if (action === "Gestionar asistencia") {
+            showAttendanceButtons();
         } else if (action === "Grupos a cargo") {
             showGroupButtons();
         } else if (action === "Gestionar estudiantes") {
@@ -1565,15 +1011,41 @@ $(".sidebar button").click(function() {
         } else if (action === "Cerrar Sesión") {
             auth.signOut()
                 .then(() => {
-                    alert('Sesión cerrada correctamente');
-                    window.location.href = 'index.html';
+                    showNotification('Sesión cerrada correctamente', 'success');
+                    window.location.href = 'login.html';
                 })
                 .catch((error) => {
-                    alert('Error al cerrar sesión: ' + error.message);
+                    showNotification('Error al cerrar sesión: ' + error.message, 'error');
                 });
         }
     });
 }
+    // Asegúrese de que la función showNotification esté disponible
+    // Si no la tiene definida en otro archivo, añádala aquí:
+    function showNotification(message, type = 'info') {
+        // Crear el elemento de notificación
+        const notification = $(`<div class="notification ${type}">
+            <span class="message">${message}</span>
+        </div>`);
+        
+        // Añadir al DOM
+        $("body").append(notification);
+        
+        // Mostrar con animación
+        notification.addClass('show');
+        
+        // Auto-ocultar después de 3 segundos
+        setTimeout(() => {
+            notification.removeClass('show');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+        
+        // Permitir cerrar manualmente
+        notification.find('.close-btn').click(function() {
+            notification.removeClass('show');
+            setTimeout(() => notification.remove(), 300);
+        });
+    }
 function showAccountInfo() {
     const user = auth.currentUser;
     if (!user) {
@@ -1587,8 +1059,7 @@ function showAccountInfo() {
         if (userData) {
             $(".main-content").html(`
                 <div class="account-info-box">
-                    <button class="back-btn">Regresar</button>
-                    <h3>Información de la cuenta</h3>
+                    <h3 style="text-align: center;">Información de la cuenta:</h3>
                     <p><strong>Nombre:</strong> ${userData.nombre}</p>
                     <p><strong>Apellido:</strong> ${userData.apellido}</p>
                     <p><strong>Email:</strong> ${userData.email}</p>
@@ -1610,51 +1081,55 @@ function showAccountInfo() {
 // Modificar la función showGroupButtons para cargar grupos dinámicamente
 function showGroupButtons() {
     $(".main-content").html(`
-        <h2>Mis Grupos</h2>
-        <div class='group-box' id="dynamic-group-box">
-            <!-- Los grupos se cargarán dinámicamente aquí -->
-            <p>Cargando grupos...</p>
+        <div class="groups-management-box glass-effect">
+            <h3>Mis Grupos</h3>
+            <div class="groups-container" id="dynamic-group-box">
+                <!-- Groups will load dynamically here -->
+                <p class="loading-message">Cargando grupos...</p>
+            </div>
         </div>
-        <div class="group-overlay" id="groupOverlay">
-            <button class="close-btn">X</button>
+        
+        <div class="group-overlay glass-effect" id="groupOverlay">
+            <button class="close-btn"><i class="fas fa-times"></i></button>
             <h3 id="groupTitle"></h3>
             <div class="name-list" id="studentsList">
-                <!-- Los estudiantes se cargarán dinámicamente -->
+                <!-- Students will load dynamically -->
             </div>
         </div>
-        <div class="attendance-menu-overlay" id="attendanceMenuOverlay">
-            <button class="close-btn">X</button>
+        
+        <div class="attendance-menu-overlay glass-effect" id="attendanceMenuOverlay">
+            <button class="close-btn"><i class="fas fa-times"></i></button>
             <h3 id="studentName"></h3>
             <div class="attendance-menu-buttons">
-                <button id="markPresentBtn">Marcar Presente</button>
-                <button id="markAbsentBtn">Marcar Ausente</button>
-                <button id="deleteAttendanceBtn">Eliminar asistencia</button>
-                <button id="viewHistoryBtn">Ver historial</button>
+                <button id="markPresentBtn"><i class="fas fa-check"></i> Marcar Presente</button>
+                <button id="markAbsentBtn"><i class="fas fa-times"></i> Marcar Ausente</button>
+                <button id="deleteAttendanceBtn"><i class="fas fa-trash"></i> Eliminar asistencia</button>
+                <button id="viewHistoryBtn"><i class="fas fa-history"></i> Ver historial</button>
             </div>
         </div>
-        <div class="attendance-history-overlay" id="attendanceHistoryOverlay" style="display:none; position:absolute; width:80%; max-width:600px; background:#bbb; padding:20px; border-radius:10px; left:50%; top:50%; transform:translate(-50%, -50%); z-index:1002;">
-            <button class="close-btn">X</button>
-            <h3>Historial de Asistencias</h3>
+        
+        <div class="attendance-history-overlay glass-effect" id="attendanceHistoryOverlay" style="display:none;">
+            <button class="close-btn"><i class="fas fa-times"></i></button>
+            <h3 class="student-history-title">Historial de Asistencias</h3>
             <h4 id="historyStudentName"></h4>
             <div id="attendanceHistory">
-                <table style="width:100%; margin-top:40px; border-collapse:collapse;">
+                <table class="student-history-table">
                     <thead>
                         <tr>
-                            <th style="padding:10px; background:#888; color:white; border-radius:5px 0 0 5px;">Fecha</th>
-                            <th style="padding:10px; background:#888; color:white; border-radius:0 5px 5px 0;">Estado</th>
+                            <th>Fecha</th>
+                            <th>Estado</th>
                         </tr>
                     </thead>
                     <tbody id="attendanceHistoryBody">
-                        <!-- El historial se cargará dinámicamente -->
+                        <!-- History will load dynamically -->
                     </tbody>
                 </table>
             </div>
         </div>
     `);
     
-    // Cargar grupos dinámicamente
-    loadGroups();
-    
+    // Ocultar los overlays inicialmente
+    // Cargar los estudiantes cuando se seleccione un grupo
     // Ocultar los overlays inicialmente
     $("#groupOverlay").hide();
     $("#attendanceMenuOverlay").hide();
@@ -1723,8 +1198,79 @@ function showGroupButtons() {
         $("#attendanceMenuOverlay").hide();
         $("#attendanceHistoryOverlay").fadeIn();
     });
-}
 
+
+    
+    // Modificar la función loadGroups para mostrar los grupos en cards animadas
+    // Esta es una función mock, debes adaptarla a tu implementación real
+    function loadGroups() {
+        // Limpiar el contenedor
+        $("#dynamic-group-box").empty();
+        
+        // Obtener referencia a la base de datos
+        const userId = firebase.auth().currentUser.uid;
+        const groupsRef = firebase.database().ref('users/' + userId + '/groups');
+        
+        groupsRef.once('value').then((snapshot) => {
+            if (snapshot.exists()) {
+                let index = 0;
+                snapshot.forEach((childSnapshot) => {
+                    const groupData = childSnapshot.val();
+                    const groupName = groupData.name || childSnapshot.key;
+                    // Calcular número de estudiantes
+                    let studentCount = 0;
+                    if (groupData.students) {
+                        studentCount = Object.keys(groupData.students).length;
+                    }
+                    
+                    // Crear la tarjeta de grupo con animación retrasada
+                    const groupCard = `
+                        <div class="group-card" style="--order: ${index}" data-group-name="${groupName}">
+                            <div class="group-icon">
+                                <i class="fas fa-users"></i>
+                            </div>
+                            <h4 class="group-name">${groupName}</h4>
+                            <p class="group-detail">${studentCount} estudiantes</p>
+                        </div>
+                    `;
+                    
+                    $("#dynamic-group-box").append(groupCard);
+                    index++;
+                });
+                
+                if (index === 0) {
+                    $("#dynamic-group-box").html('<p class="loading-message">No hay grupos disponibles</p>');
+                }
+            } else {
+                $("#dynamic-group-box").html('<p class="loading-message">No hay grupos disponibles</p>');
+            }
+        }).catch((error) => {
+            console.error("Error loading groups:", error);
+            $("#dynamic-group-box").html('<p class="loading-message">Error al cargar grupos</p>');
+        });
+    }
+    
+    // Cargar grupos dinámicamente
+    loadGroups();
+    
+    // Evento delegado para las tarjetas de grupo
+    $("#dynamic-group-box").on("click", ".group-card", function() {
+        let groupName = $(this).data("group-name");
+        $("#groupTitle").text(groupName);
+        
+        // Guardamos el nombre del grupo seleccionado
+        currentGroup = groupName;
+        
+        // Cargar los estudiantes del grupo
+        loadStudentsFromGroup(groupName);
+        
+        // Animación para mostrar overlay
+        $(".groups-management-box").fadeOut(300, function() {
+            $("#groupOverlay").fadeIn(300);
+        });
+    });
+    
+}
 // Función para cargar grupos desde Firebase
 function loadGroups() {
     const user = firebase.auth().currentUser; // Obtener usuario autenticado
@@ -1753,7 +1299,6 @@ function loadGroups() {
 function showStudentManagement() {
     $(".main-content").html(`
         <div class="student-management-box">
-            <button class="back-btn">Regresar</button>
             <h3>Gestionar Estudiantes</h3>
             <div class="student-management-buttons">
                 <button id="add-student-btn">Agregar</button>
@@ -1934,9 +1479,18 @@ function loadStudentListForDeletion() {
                     const studentId = $(this).data("student-id");
                     const studentName = $(this).data("student-name");
                     
-                    if (confirm(`¿Estás seguro de que deseas eliminar a ${studentName}?`)) {
-                        deleteStudent(groupKey, studentId, studentName);
-                    }
+                    // Reemplazar confirm() con nuestro diálogo personalizado
+                    showCustomConfirmation(
+                        `¿Estás seguro de que deseas eliminar a ${studentName}?`, 
+                        () => {
+                            // Si confirma, ejecuta la eliminación
+                            deleteStudent(groupKey, studentId, studentName);
+                        }, 
+                        () => {
+                            // Si cancela, no hace nada
+                            console.log("Eliminación cancelada");
+                        }
+                    );
                 });
                 
                 $(".change-group-btn").off("click").on("click", function() {
@@ -1954,6 +1508,32 @@ function loadStudentListForDeletion() {
 
 // Modificar la función init o $(document).ready() para actualizar la barra lateral
 $(document).ready(function() {
+    
+    // Función para mostrar notificaciones personalizadas
+    function showNotification(message, type = 'info') {
+        // Crear el elemento de notificación
+        const notification = $(`<div class="notification ${type}">
+            <span class="message">${message}</span>
+        </div>`);
+        
+        // Añadir al DOM
+        $("body").append(notification);
+        
+        // Mostrar con animación
+        notification.addClass('show');
+        
+        // Auto-ocultar después de 3 segundos
+        setTimeout(() => {
+            notification.removeClass('show');
+            setTimeout(() => notification.remove(), 300);
+        }, 3000);
+        
+        // Permitir cerrar manualmente
+        notification.find('.close-btn').click(function() {
+            notification.removeClass('show');
+            setTimeout(() => notification.remove(), 300);
+        });
+    }
     
     auth.onAuthStateChanged((user) => {
         if (user) {
@@ -1973,9 +1553,9 @@ $(document).ready(function() {
                 }
             });
         } else {
-            // Redirigir a index.html solo si no estamos ya en ella
-            if (!window.location.pathname.includes('index.html')) {
-                window.location.href = 'index.html';
+            // Redirigir a login.html solo si no estamos ya en ella
+            if (!window.location.pathname.includes('login.html')) {
+                window.location.href = 'login.html';
             }
         }
     });
@@ -1987,11 +1567,11 @@ $(document).ready(function() {
     $("#logoutButton").click(function() {
         auth.signOut()
             .then(() => {
-                alert('Sesión cerrada correctamente');
-                window.location.href = 'index.html';
+                showNotification('Sesión cerrada correctamente', 'success');
+                window.location.href = 'login.html';
             })
             .catch((error) => {
-                alert('Error al cerrar sesión: ' + error.message);
+                showNotification('Error al cerrar sesión: ' + error.message, 'error');
             });
     });
 
@@ -2000,6 +1580,7 @@ $(document).ready(function() {
         updateSidebar();
     }
 });
+
 // Función para eliminar una asistencia específica
 function deleteAttendance(studentId, attendanceKey, groupName) {
     const user = firebase.auth().currentUser;
@@ -2052,4 +1633,152 @@ function deleteLastAttendance(studentId, groupName) {
     }).catch((error) => {
         alert("Error al buscar asistencias: " + error.message);
     });
+}
+(function() {
+    // Crear el contenedor de notificaciones si no existe
+    if (!document.querySelector('.custom-notification-container')) {
+        const container = document.createElement('div');
+        container.className = 'custom-notification-container';
+        document.body.appendChild(container);
+    }
+    
+    // Función para mostrar notificaciones
+    window.showNotification = function(message, type = 'info', duration = 3000) {
+        const container = document.querySelector('.custom-notification-container');
+        
+        // Crear elemento de notificación
+        const notification = document.createElement('div');
+        notification.className = `custom-notification ${type}`;
+        notification.textContent = message;
+        
+        // Añadir al contenedor
+        container.appendChild(notification);
+        
+        // Mostrar con animación (usar setTimeout para asegurar que la transición funcione)
+        setTimeout(() => notification.classList.add('show'), 10);
+        
+        // Ocultar después del tiempo especificado
+        const timeout = setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => notification.remove(), 300); // Tiempo para la animación de salida
+        }, duration);
+        
+        return notification;
+    };
+    
+    // Sobrescribir la función de alerta nativa
+    const originalAlert = window.alert;
+    window.alert = function(message) {
+        showNotification(message, 'info');
+        // Si quieres mantener el comportamiento original también, descomenta la siguiente línea:
+        // originalAlert(message);
+    };
+    
+    // Método para diferentes tipos de notificaciones
+    window.notify = {
+        success: function(message, duration) {
+            return showNotification(message, 'success', duration);
+        },
+        error: function(message, duration) {
+            return showNotification(message, 'error', duration);
+        },
+        info: function(message, duration) {
+            return showNotification(message, 'info', duration);
+        },
+        warning: function(message, duration) {
+            return showNotification(message, 'warning', duration);
+        }
+    };
+    
+    console.log('Sistema de notificaciones inicializado correctamente');
+})();
+function createConfirmationDialog() {
+    // Verificar si ya existe un diálogo
+    if (document.querySelector('.custom-dialog-overlay')) {
+        return;
+    }
+    
+    // Crear elementos del diálogo
+    const overlay = document.createElement('div');
+    overlay.className = 'custom-dialog-overlay';
+    
+    const dialog = document.createElement('div');
+    dialog.className = 'custom-dialog';
+    
+    const header = document.createElement('div');
+    header.className = 'custom-dialog-header';
+    header.textContent = 'Confirmar acción';
+    
+    const content = document.createElement('div');
+    content.className = 'custom-dialog-content';
+    
+    const buttons = document.createElement('div');
+    buttons.className = 'custom-dialog-buttons';
+    
+    const cancelBtn = document.createElement('button');
+    cancelBtn.className = 'custom-dialog-btn custom-dialog-btn-cancel';
+    cancelBtn.textContent = 'Cancelar';
+    
+    const confirmBtn = document.createElement('button');
+    confirmBtn.className = 'custom-dialog-btn custom-dialog-btn-confirm';
+    confirmBtn.textContent = 'Eliminar';
+    
+    // Ensamblar el diálogo
+    buttons.appendChild(cancelBtn);
+    buttons.appendChild(confirmBtn);
+    
+    dialog.appendChild(header);
+    dialog.appendChild(content);
+    dialog.appendChild(buttons);
+    
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    return {
+        overlay,
+        content,
+        cancelBtn,
+        confirmBtn
+    };
+}
+
+// Función para mostrar el diálogo de confirmación
+function showCustomConfirmation(message, onConfirm, onCancel) {
+    const dialog = createConfirmationDialog();
+    
+    // Establecer el mensaje
+    dialog.content.textContent = message;
+    
+    // Configurar el botón cancelar
+    dialog.cancelBtn.onclick = () => {
+        hideDialog(dialog.overlay);
+        if (onCancel) onCancel();
+    };
+    
+    // Configurar el botón confirmar
+    dialog.confirmBtn.onclick = () => {
+        hideDialog(dialog.overlay);
+        if (onConfirm) onConfirm();
+    };
+    
+    // Mostrar el diálogo
+    setTimeout(() => {
+        dialog.overlay.classList.add('active');
+    }, 10);
+    
+    // También permitir cerrar al hacer clic en el overlay
+    dialog.overlay.onclick = (e) => {
+        if (e.target === dialog.overlay) {
+            hideDialog(dialog.overlay);
+            if (onCancel) onCancel();
+        }
+    };
+}
+
+// Función para ocultar el diálogo
+function hideDialog(overlay) {
+    overlay.classList.remove('active');
+    setTimeout(() => {
+        overlay.remove();
+    }, 300); // Tiempo para la animación
 }

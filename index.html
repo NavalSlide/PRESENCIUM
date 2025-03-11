@@ -1,104 +1,63 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Sistema de asistencia Presencium">
-  <meta name="author" content="Presencium Corp">
-  <title>Presencium - Sistema de Asistencia</title>
-  <link rel="icon" type="image/x-icon" href="/ico.ico">
-  <!-- Fuentes e íconos -->
-  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
-  <!-- Estilos -->
-  <link rel="stylesheet" href="styles.css">
-  <!-- Firebase SDK (versión más reciente) -->
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-database-compat.js"></script>
-  <!-- jQuery (versión actualizada) -->
-  <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Presencium - Sistema de Asistencia Inteligente">
+    <meta name="author" content="Presencium Corp">
+    <title>Presencium - Bienvenido</title>
+    <link rel="icon" type="image/x-icon" href="/ico.ico">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;700&display=swap">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link rel="stylesheet" href="home.css">
 </head>
 <body>
-  <div class="background"></div>
-  <main class="login-container">
-    <header class="header">
-      <h1>PRESENCIUM</h1>
-      <h2>Sistema de Asistencia</h2>
-    </header>
-
-    <!-- Formulario de Login -->
-    <section class="form-container login-form" id="loginForm" aria-labelledby="login-title">
-      <h3 id="login-title" class="sr-only">Iniciar Sesión</h3>
-      <form id="loginFormSubmit">
-        <div class="input-group">
-          <label for="loginEmail">
-            <i class="fas fa-envelope"></i> Correo Electrónico
-          </label>
-          <input type="email" id="loginEmail" name="email" placeholder="Ingresa tu correo" required aria-required="true">
-        </div>
-        <div class="input-group">
-          <label for="loginPassword">
-            <i class="fas fa-lock"></i> Contraseña
-          </label>
-          <input type="password" id="loginPassword" name="password" placeholder="Ingresa tu contraseña" required aria-required="true">
-        </div>
-        <button type="submit" aria-label="Iniciar sesión">Iniciar Sesión</button>
-      </form>
-      <p class="register-link">¿No tienes cuenta? <a href="#" onclick="showRegister()">Regístrate</a></p>
-    </section>
-
-    <!-- Formulario de Registro -->
-    <section class="form-container register-form" id="registerForm" style="display: none;" aria-labelledby="register-title">
-      <h3 id="register-title" class="sr-only">Registrarse</h3>
-      <form id="registerFormSubmit">
-        <div class="input-group">
-          <label for="name">
-            <i class="fas fa-user"></i> Nombre
-          </label>
-          <input type="text" id="name" name="name" placeholder="Ingresa tu nombre" required aria-required="true">
-        </div>
-        <div class="input-group">
-          <label for="lastName">
-            <i class="fas fa-user"></i> Apellido
-          </label>
-          <input type="text" id="lastName" name="lastName" placeholder="Ingresa tu apellido" required aria-required="true">
-        </div>
-        <div class="input-group">
-          <label for="email">
-            <i class="fas fa-envelope"></i> Correo Electrónico
-          </label>
-          <input type="email" id="email" name="email" placeholder="Ingresa tu correo" required aria-required="true">
-        </div>
-        <div class="input-group">
-          <label for="password">
-            <i class="fas fa-lock"></i> Contraseña
-          </label>
-          <input type="password" id="password" name="password" placeholder="Crea una contraseña" required aria-required="true">
-        </div>
-        <button type="submit" aria-label="Continuar al paso de confirmación">Continuar</button>
-      </form>
-      <p class="back-link"><a href="#" onclick="showLogin()">Volver al login</a></p>
-    </section>
-
-    <!-- Formulario de Confirmación -->
-    <section class="form-container confirm-form" id="confirmForm" style="display: none;" aria-labelledby="confirm-title">
-      <h3 id="confirm-title" class="sr-only">Confirmar Registro</h3>
-      <form id="confirmFormSubmit">
-        <div class="input-group">
-          <label for="confirmPassword">
-            <i class="fas fa-lock"></i> Confirmar Contraseña
-          </label>
-          <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Confirma tu contraseña" required aria-required="true">
-        </div>
-        <button type="submit" aria-label="Completar registro">Registrarse</button>
-      </form>
-      <p class="error" id="errorMessage" style="color: red; display: none;">
-        <i class="fas fa-exclamation-circle"></i> Las contraseñas no coinciden. Inténtalo de nuevo.
-      </p>
-      <p class="back-link"><a href="#" onclick="showRegister()">Volver</a></p>
-    </section>
-  </main>
-  <script src="script.js"></script>
+    
+    <div class="background"></div>
+    <main class="home-container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-user-check"></i>
+                <span>Presencium</span>
+            </div>
+            <nav>
+                <a href="login.html" class="login-btn">Iniciar Sesión</a>
+            </nav>
+        </header>
+        <section class="hero">
+            <h1>Sistema de Asistencia Inteligente</h1>
+            <p>Gestiona asistencias, grupos y estudiantes de manera simple y eficiente.</p>
+            <a href="login.html" class="cta-btn">¡Comienza Ahora!</a>
+        </section>
+        <section class="features">
+            <h2>¿Qué puedes hacer con Presencium?</h2>
+            <div class="feature-grid">
+                <div class="feature-item">
+                    <i class="fas fa-check-circle"></i>
+                    <h3>Gestionar Asistencia</h3>
+                    <p>Registra y consulta asistencias en tiempo real con un solo clic.</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-users"></i>
+                    <h3>Administrar Grupos</h3>
+                    <p>Organiza tus grupos y estudiantes de forma sencilla.</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-desktop"></i>
+                    <h3>Interfaz Intuitiva</h3>
+                    <p>Un diseño moderno que facilita tu día a día.</p>
+                </div>
+                <div class="feature-item">
+                    <i class="fas fa-lock"></i>
+                    <h3>Acceso Seguro</h3>
+                    <p>Tus datos protegidos con autenticación avanzada.</p>
+                </div>
+            </div>
+        </section>
+        <footer class="footer">
+            <p>© 2025 Presencium Corp. Todos los derechos reservados.</p>
+        </footer>
+    </main>
 </body>
 </html>

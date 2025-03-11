@@ -1,3 +1,166 @@
+.custom-notification-container {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  max-width: 300px;
+  z-index: 9999;
+}
+
+.custom-notification {
+  margin-bottom: 10px;
+  padding: 15px 20px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+  transform: translateX(110%);
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  opacity: 0;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.custom-notification.show {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+.custom-notification.success {
+  background: rgba(76, 175, 80, 0.2);
+  border-left: 4px solid rgba(76, 175, 80, 0.8);
+}
+
+.custom-notification.error {
+  background: rgba(244, 67, 54, 0.2);
+  border-left: 4px solid rgba(244, 67, 54, 0.8);
+}
+
+.custom-notification.info {
+  background: rgba(0, 170, 255, 0.2);
+  border-left: 4px solid rgba(0, 170, 255, 0.8);
+}
+
+.custom-notification.warning {
+  background: rgba(255, 193, 7, 0.2);
+  border-left: 4px solid rgba(255, 193, 7, 0.8);
+}
+
+/* Custom Dialog with Glassmorphism */
+.custom-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(30, 30, 47, 0.6);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+
+.custom-dialog-overlay.active {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.custom-dialog {
+  background: rgba(30, 30, 47, 0.8);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 15px;
+  padding: 25px;
+  width: 90%;
+  max-width: 400px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.3);
+  transform: translateY(-20px);
+  transition: transform 0.3s ease;
+  color: #fff;
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+.custom-dialog-overlay.active .custom-dialog {
+  transform: translateY(0);
+}
+
+.custom-dialog-header {
+  font-size: 20px;
+  font-weight: 600;
+  margin-bottom: 15px;
+  color: #fff;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 10px;
+}
+
+.custom-dialog-content {
+  margin-bottom: 20px;
+  color: rgba(255, 255, 255, 0.9);
+  font-size: 16px;
+  line-height: 1.5;
+}
+
+.custom-dialog-buttons {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.custom-dialog-btn {
+  padding: 10px 18px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  backdrop-filter: blur(5px);
+  font-size: 15px;
+}
+
+.custom-dialog-btn-cancel {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.custom-dialog-btn-cancel:hover {
+  background: rgba(255, 255, 255, 0.15);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.custom-dialog-btn-confirm {
+  background: rgba(244, 67, 54, 0.3);
+  color: #fff;
+}
+
+.custom-dialog-btn-confirm:hover {
+  background: rgba(244, 67, 54, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 10px rgba(244, 67, 54, 0.3);
+}
+
+/* Animation for fading effects */
+@keyframes fadeIn {
+from { opacity: 0; transform: translateY(10px); }
+to { opacity: 1; transform: translateY(0); }
+}
+
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+  .custom-notification-container {
+      width: 90%;
+      right: 5%;
+  }
+  
+  .custom-dialog {
+      width: 95%;
+      padding: 20px;
+  }
+}
 /* Estilos generales */
 body {
   font-family: 'Poppins', sans-serif;
@@ -7,22 +170,14 @@ body {
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: #000;
+  font-family: 'Poppins', sans-serif;
+  background: linear-gradient(135deg, #1e1e2f 0%, #2a1b3d 50%, #3a2a5a 100%);
+  color: #fff;
+  overflow-x: hidden;
 }
 
 /* Fondo con efecto blur */
-.background {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background-image: url('backgroud.jpg'); /* Reemplaza con tu imagen */
-  background-size: cover;
-  background-repeat: no-repeat;
-  filter: blur(5px);
-  z-index: -1;
-}
+
 
 /* Contenedor principal */
 .login-container {
@@ -38,10 +193,12 @@ body {
   font-size: 2.8em;
   font-weight: bold;
   margin: 0;
+  text-indent: 15px;
   text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.5);
 }
 
 .header h2 {
+  text-indent: 15px;
   font-size: 1.6em;
   font-weight: normal;
   margin: 10px 0 40px;
@@ -51,15 +208,17 @@ body {
 
 /* Contenedor del formulario con efecto glassmorphism */
 .form-container {
-  background-color: rgba(50, 50, 50, 0.5);
-  backdrop-filter: blur(10px);
+  background-color: rgba(0, 0, 0, 0.3); /* Más translúcido */
+  backdrop-filter: blur(15px); /* Mayor desenfoque */
   border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1); /* Borde sutil */
   box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
   margin: 0 auto;
   padding: 30px;
   width: 90%;
   max-width: 350px;
-  animation: fadeInUp 0.5s ease-out;
+  animation: fadeInUp 0.7s ease-out; /* Animación más suave */
+  margin-top: 120px;
 }
 
 /* Animación de entrada */
@@ -101,13 +260,13 @@ body {
 
 .input-group input {
   width: 100%;
-  padding: 10px 10px 10px 35px; /* Espacio para el ícono */
+  padding: 10px 10px 10px 10px; /* Espacio para el ícono */
   border: none;
   border-bottom: 2px solid #ccc;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.1); /* Fondo ligeramente más claro */
   color: white;
   font-size: 1em;
-  transition: border-bottom-color 0.3s;
+  transition: border-bottom-color 0.3s, background 0.3s;
 }
 
 .input-group input::placeholder {
@@ -116,12 +275,13 @@ body {
 
 .input-group input:focus {
   outline: none;
-  border-bottom-color: #00bfff;
+  border-bottom-color: #0074D9; /* Azul más claro */
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Botón */
 button {
-  background: linear-gradient(to right, #00bfff, #1e90ff);
+  background: linear-gradient(to right, #0074D9, #00bfff);
   color: white;
   border: none;
   border-radius: 25px;
@@ -149,10 +309,12 @@ button:hover {
   color: #00eeff;
   text-decoration: none;
   transition: color 0.2s;
+  text-align: center;
+  display: block; /* Para que ocupen todo el ancho disponible */
 }
 
 .register-link a:hover, .back-link a:hover {
-  color: #00bfff;
+  color: #0074D9;
   text-decoration: underline;
 }
 
@@ -168,6 +330,98 @@ button:hover {
 .error::before {
   content: '⚠️';
   margin-right: 5px;
+}
+
+/* Spinner */
+.spinner {
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-top: 4px solid #0074D9;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin: 20px auto;
+}
+.logo {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'Poppins', sans-serif;
+  font-size: 28px;
+  font-weight: bold;
+  color: #00aaff;
+  text-shadow: 0 0 5px rgba(0, 170, 255, 0.5);
+  animation: fadeIn 1s ease-out forwards;
+}
+/* Header con animación de entrada */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 35px 30px;
+  background: rgba(30, 30, 47, 0.8);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+  animation: slideDown 0.8s ease-out forwards;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 1000;
+}
+
+.logo {
+  font-size: 28px;
+  font-weight: bold;
+  color: #00aaff;
+  text-shadow: 0 0 5px rgba(0, 170, 255, 0.5);
+  animation: fadeIn 1s ease-out forwards;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.login-btn {
+  padding: 10px 20px;
+  font-size: 14px;
+  position: fixed;
+  top: 15px; /* Distancia desde la parte superior */
+  right: 70px; /* Distancia desde la derecha */
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 5px;
+  color: #fff;
+  text-decoration: none;
+  transition: background 0.3s ease, transform 0.3s ease, box-shadow 0.3s ease;
+  backdrop-filter: blur(5px);
+  z-index: 1000; /* Para que siempre esté encima */
+}
+
+.login-btn:hover {
+  background: rgba(0, 170, 255, 0.2);
+  transform: scale(1.05) translateY(-2px);
+  box-shadow: 0 4px 10px rgba(0, 170, 255, 0.3);
+}
+
+
+
+/* Animaciones de entrada */
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-50px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
 }
 
 /* Responsividad */
